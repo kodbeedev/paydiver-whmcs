@@ -1,12 +1,12 @@
 <?php
 /**
- * Jomabee payment gateway for WHMCS — by Kodbee (https://kodbee.com).
+ * Paydiver payment gateway for WHMCS — by Kodbee (https://kodbee.com).
  *
- * Install: copy the `modules/gateways/jomabee.php` and
- * `modules/gateways/callback/jomabee.php` files into your WHMCS installation,
- * then activate "Jomabee" under Setup → Payments → Payment Gateways.
+ * Install: copy the `modules/gateways/paydiver.php` and
+ * `modules/gateways/callback/paydiver.php` files into your WHMCS installation,
+ * then activate "Paydiver" under Setup → Payments → Payment Gateways.
  *
- * @package Jomabee\WHMCS
+ * @package Paydiver\WHMCS
  */
 
 if (! defined('WHMCS')) {
@@ -18,10 +18,10 @@ use WHMCS\Database\Capsule;
 /**
  * @return array<string,mixed>
  */
-function jomabee_MetaData()
+function paydiver_MetaData()
 {
     return [
-        'DisplayName' => 'Jomabee',
+        'DisplayName' => 'Paydiver',
         'APIVersion' => '1.1',
         'DisableLocalCreditCardInput' => true,
         'TokenisedStorage' => false,
@@ -31,16 +31,16 @@ function jomabee_MetaData()
 /**
  * @return array<string,array<string,string|bool>>
  */
-function jomabee_config()
+function paydiver_config()
 {
     return [
-        'FriendlyName' => ['Type' => 'System', 'Value' => 'Jomabee'],
+        'FriendlyName' => ['Type' => 'System', 'Value' => 'Paydiver'],
         'base_url' => [
             'FriendlyName' => 'Base URL',
             'Type' => 'text',
             'Size' => '40',
             'Default' => 'https://pay.kodbee.com',
-            'Description' => 'Your Jomabee instance URL.',
+            'Description' => 'Your Paydiver instance URL.',
         ],
         'api_key' => ['FriendlyName' => 'API Key', 'Type' => 'text', 'Size' => '40'],
         'secret_key' => ['FriendlyName' => 'Secret Key', 'Type' => 'password', 'Size' => '40'],
@@ -54,17 +54,17 @@ function jomabee_config()
 }
 
 /**
- * Render the payment button: creates a Jomabee invoice and links to the
+ * Render the payment button: creates a Paydiver invoice and links to the
  * hosted payment page.
  *
  * @param array<string,mixed> $params
  */
-function jomabee_link($params)
+function paydiver_link($params)
 {
-    jomabee_ensure_table();
+    paydiver_ensure_table();
 
     $base = rtrim((string) $params['base_url'], '/');
-    $callback = rtrim((string) $params['systemurl'], '/') . '/modules/gateways/callback/jomabee.php';
+    $callback = rtrim((string) $params['systemurl'], '/') . '/modules/gateways/callback/paydiver.php';
 
     $payload = [
         'amount' => (float) $params['amount'],
@@ -75,7 +75,7 @@ function jomabee_link($params)
         'callback_url' => $callback,
     ];
 
-    $response = jomabee_http(
+    $response = paydiver_http(
         $base . '/api/v1/payment/create',
         $payload,
         (string) $params['api_key'],
@@ -86,8 +86,8 @@ function jomabee_link($params)
         return '<div style="color:#c00">' . htmlspecialchars($params['langpaynow'] ?? 'Payment is temporarily unavailable.') . '</div>';
     }
 
-    Capsule::table('mod_jomabee_map')->updateOrInsert(
-        ['jomabee_invoice' => $response['data']['invoice_id']],
+    Capsule::table('mod_paydiver_map')->updateOrInsert(
+        ['paydiver_invoice' => $response['data']['invoice_id']],
         ['whmcs_invoice' => (int) $params['invoiceid'], 'created_at' => date('Y-m-d H:i:s')]
     );
 
@@ -97,15 +97,15 @@ function jomabee_link($params)
     return '<a class="btn btn-primary" href="' . $url . '">' . $label . '</a>';
 }
 
-/** Lazily create the jomabee → WHMCS invoice mapping table. */
-function jomabee_ensure_table(): void
+/** Lazily create the paydiver → WHMCS invoice mapping table. */
+function paydiver_ensure_table(): void
 {
-    if (Capsule::schema()->hasTable('mod_jomabee_map')) {
+    if (Capsule::schema()->hasTable('mod_paydiver_map')) {
         return;
     }
 
-    Capsule::schema()->create('mod_jomabee_map', function ($table): void {
-        $table->string('jomabee_invoice')->primary();
+    Capsule::schema()->create('mod_paydiver_map', function ($table): void {
+        $table->string('paydiver_invoice')->primary();
         $table->integer('whmcs_invoice')->index();
         $table->string('created_at')->nullable();
     });
@@ -117,7 +117,7 @@ function jomabee_ensure_table(): void
  * @param array<string,mixed> $payload
  * @return array<string,mixed>|null
  */
-function jomabee_http(string $url, array $payload, string $apiKey, string $secretKey)
+function paydiver_http(string $url, array $payload, string $apiKey, string $secretKey)
 {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
